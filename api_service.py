@@ -16,19 +16,41 @@ class ExpresionRequest(BaseModel):
     expresion: str
 
 class AnalisisResponse(BaseModel):
-    tokens: List[Tuple[str, str]]
-    tabla_simbolos: Dict[str, str]
-    tabla_tipos: Dict[str, str]
-    imagenes: Dict[str, str]
-    errores: List[Tuple[str, int]]
+    error: str | None = None
+    tokens_image: str | None = None
+    symbols_image: str | None = None
+    types_image: str | None = None
 
-def analisis_lexico(expresion: str):
+def generar_imagen_tabla(df: pd.DataFrame, titulo: str) -> str:
+    plt.figure(figsize=(10, 6))
+    plt.axis('tight')
+    plt.axis('off')
+    tabla = plt.table(cellText=df.values,
+                     colLabels=df.columns,
+                     cellLoc='center',
+                     loc='center')
+    plt.title(titulo)
+    
+    # Guardar la imagen en un buffer de memoria
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    plt.close()
+    
+    # Convertir la imagen a base64
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.getvalue()).decode()
+    return img_base64
+
+def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict], List[Dict]]:
+    if not expresion.strip():
+        return "Error: La expresión está vacía", [], [], []
+
     tokens = []
-    tabla_simbolos = {}
-    tabla_tipos = {}
-    errores = []
-    direccion_counter = 1
+    simbolos = []
+    tipos = []
     i = 0
+    ultimo_operador = False
+    token_id = 1
 
     while i < len(expresion):
         char = expresion[i]
@@ -43,81 +65,50 @@ def analisis_lexico(expresion: str):
             while i < len(expresion) and expresion[i].isdigit():
                 numero += expresion[i]
                 i += 1
-            tokens.append(('NUMERO', numero))
-
-            if numero not in tabla_simbolos:
-                tabla_simbolos[numero] = f'dir_{direccion_counter}'
-                tabla_tipos[numero] = 'entero'
-                direccion_counter += 1
+            tokens.append({"ID": token_id, "Token": numero, "Tipo": "Número"})
+            simbolos.append({"ID": token_id, "Símbolo": numero, "Categoría": "Literal"})
+            tipos.append({"ID": token_id, "Tipo": "int", "Descripción": "Número entero"})
+            token_id += 1
+            ultimo_operador = False
         elif char in '+-*/':
-            tokens.append(('OPERADOR', char))
+            if ultimo_operador:
+                return f'Error: Operadores consecutivos encontrados en la posición {i}', [], [], []
+            tokens.append({"ID": token_id, "Token": char, "Tipo": "Operador"})
+            simbolos.append({"ID": token_id, "Símbolo": char, "Categoría": "Operador"})
+            tipos.append({"ID": token_id, "Tipo": "operator", "Descripción": "Operador aritmético"})
+            token_id += 1
+            ultimo_operador = True
             i += 1
         else:
-            errores.append((char, i))
-            i += 1
+            return f'Error: Carácter no válido "{char}" encontrado en la posición {i}', [], [], []
 
-    return tokens, tabla_simbolos, tabla_tipos, errores
+    if ultimo_operador:
+        return 'Error: La expresión no puede terminar con un operador', [], [], []
 
-def generar_tabla_imagen_base64(data, columnas, titulo) -> str:
-    df = pd.DataFrame(data, columns=columnas)
-    fig, ax = plt.subplots(figsize=(6, 2 + len(data) * 0.5))
-    ax.axis('off')
-
-    tabla = ax.table(
-        cellText=df.values,
-        colLabels=df.columns,
-        loc='center',
-        cellLoc='center',
-        colColours=["#4682B4"] * len(columnas),
-        cellColours=[["#F0F8FF"] * len(columnas) for _ in range(len(data))]
-    )
-
-    tabla.auto_set_font_size(False)
-    tabla.set_fontsize(12)
-    tabla.scale(1.2, 1.2)
-
-    plt.title(titulo, fontsize=16, fontweight='bold', pad=20, color='#333333')
-    plt.figtext(0.5, 0.02, "copyright yksogeid", wrap=True,
-                horizontalalignment='center', fontsize=10, color='gray', style='italic')
-
-    # Guardar la imagen en un buffer de memoria
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight', dpi=300)
-    plt.close()
-    buf.seek(0)
-    
-    # Convertir a base64
-    imagen_base64 = base64.b64encode(buf.getvalue()).decode()
-    return imagen_base64
+    return None, tokens, simbolos, tipos
 
 @app.post("/analizar", response_model=AnalisisResponse)
 def analizar_expresion(request: ExpresionRequest):
     try:
-        tokens, simbolos, tipos, errores = analisis_lexico(request.expresion)
+        error, tokens, simbolos, tipos = analisis_lexico(request.expresion)
+        if error:
+            return {"error": error, "tokens_image": None, "symbols_image": None, "types_image": None}
         
-        # Generar imágenes en base64
-        imagenes = {}
-        if not errores:
-            # Generar imagen de tokens
-            imagenes['tokens'] = generar_tabla_imagen_base64(
-                tokens, ["TIPO", "VALOR"], "Tokens Identificados")
-            
-            # Generar imagen de tabla de símbolos
-            simbolos_data = [(k, v) for k, v in simbolos.items()]
-            imagenes['simbolos'] = generar_tabla_imagen_base64(
-                simbolos_data, ["Símbolo", "Dirección"], "Tabla de Símbolos")
-            
-            # Generar imagen de tabla de tipos
-            tipos_data = [(k, v) for k, v in tipos.items()]
-            imagenes['tipos'] = generar_tabla_imagen_base64(
-                tipos_data, ["Símbolo", "Tipo"], "Tabla de Tipos")
+        # Generar DataFrames
+        df_tokens = pd.DataFrame(tokens)
+        df_simbolos = pd.DataFrame(simbolos)
+        df_tipos = pd.DataFrame(tipos)
+        
+        # Generar imágenes de las tablas
+        tokens_img = generar_imagen_tabla(df_tokens, "Tabla de Tokens")
+        simbolos_img = generar_imagen_tabla(df_simbolos, "Tabla de Símbolos")
+        tipos_img = generar_imagen_tabla(df_tipos, "Tabla de Tipos")
         
         return {
-            "tokens": tokens,
-            "tabla_simbolos": simbolos,
-            "tabla_tipos": tipos,
-            "imagenes": imagenes,
-            "errores": errores
+            "error": None,
+            "tokens_image": tokens_img,
+            "symbols_image": simbolos_img,
+            "types_image": tipos_img
         }
     
     except Exception as e:
