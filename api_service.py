@@ -15,11 +15,13 @@ app = FastAPI(
 class ExpresionRequest(BaseModel):
     expresion: str
 
+from typing import Optional
+
 class AnalisisResponse(BaseModel):
-    error: str | None = None
-    tokens_image: str | None = None
-    symbols_image: str | None = None
-    types_image: str | None = None
+    error: Optional[str] = None
+    tokens_image: Optional[str] = None
+    symbols_image: Optional[str] = None
+    types_image: Optional[str] = None
 
 def generar_imagen_tabla(df: pd.DataFrame, titulo: str) -> str:
     plt.figure(figsize=(10, 6))

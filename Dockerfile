@@ -1,5 +1,5 @@
 # Etapa de construcción
-FROM python:3.9-slim as builder
+FROM python:3.10-slim as builder
 
 WORKDIR /app
 
@@ -15,12 +15,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Etapa de producción
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
 # Copiar dependencias instaladas desde la etapa de construcción
-COPY --from=builder /usr/local/lib/python3.9/site-packages/ /usr/local/lib/python3.9/site-packages/
+COPY --from=builder /usr/local/lib/python3.10/site-packages/ /usr/local/lib/python3.10/site-packages/
 
 # Copiar el código de la aplicación
 COPY . .
