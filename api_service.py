@@ -81,17 +81,16 @@ def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict],
     simbolos_unicos = {}
     dir_counter = 1
 
-    # Validate input string for invalid characters first
-    for pos, char in enumerate(expresion):
-        if not (char.isdigit() or char in '+-*/ ' or char.isspace()):
-            return f'Error: Carácter no válido "{char}" encontrado en la posición {pos + 1}', [], [], []
-
     while i < len(expresion):
         char = expresion[i]
 
         if char.isspace():
             i += 1
             continue
+
+        # Validar caracteres permitidos
+        if not (char.isdigit() or char in '+-*/' or char.isspace()):
+            return f'Error: Carácter no válido "{char}" encontrado en la posición {i + 1}', [], [], []
 
         if char.isdigit():
             numero = char
