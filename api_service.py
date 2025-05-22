@@ -23,51 +23,6 @@ class AnalisisResponse(BaseModel):
     symbols_image: Optional[str] = None
     types_image: Optional[str] = None
 
-def generar_imagen_tabla(df: pd.DataFrame, titulo: str) -> str:
-    # Set style to minimalist
-    plt.style.use('seaborn-v0_8-whitegrid')
-    
-    # Create figure with white background
-    plt.figure(figsize=(10, 6), facecolor='white')
-    plt.axis('tight')
-    plt.axis('off')
-    
-    # Create table with minimalist design
-    tabla = plt.table(
-        cellText=df.values,
-        colLabels=df.columns,
-        cellLoc='center',
-        loc='center',
-        edges='horizontal',  # Only show horizontal lines
-        bbox=[0.1, 0.1, 0.8, 0.8]  # Adjust table size and position
-    )
-    
-    # Style the table
-    tabla.auto_set_font_size(False)
-    tabla.set_fontsize(9)
-    
-    # Style header
-    for k, cell in tabla._cells.items():
-        cell.set_edgecolor('white')
-        if k[0] == 0:  # Header styling
-            cell.set_facecolor('#f0f0f0')
-            cell.set_text_props(weight='bold')
-        else:  # Content styling
-            cell.set_facecolor('white')
-    
-    # Add title with minimal styling
-    plt.title(titulo, pad=20, fontsize=12, fontweight='bold')
-    
-    # Save to buffer
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight', dpi=300)
-    plt.close()
-    
-    # Convert to base64
-    buf.seek(0)
-    img_base64 = base64.b64encode(buf.getvalue()).decode()
-    return img_base64
-
 def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict], List[Dict]]:
     if not expresion.strip():
         return "Error: La expresión está vacía", [], [], []
@@ -151,7 +106,108 @@ def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict],
     if ultimo_operador:
         return 'Error: La expresión no puede terminar con un operador', [], [], []
 
-    return None, tokens, simbolos, tipos
+    # Modificar la estructura de tokens
+    tokens_formatted = []
+    for token in tokens:
+        if token["Tipo"] == "Número":
+            tokens_formatted.append({
+                "Token": f"[TIPO: {token['Tipo'].upper()}, VALOR: {token['Token']}]"
+            })
+        else:
+            tokens_formatted.append({
+                "Token": f"[TIPO: {token['Tipo'].upper()}, VALOR: {token['Token']}]"
+            })
+
+    # Modificar la estructura de símbolos (solo números únicos)
+    simbolos_formatted = []
+    simbolos_vistos = set()
+    for s in simbolos:
+        if s["Categoría"] == "Literal" and s["Símbolo"] not in simbolos_vistos:
+            simbolos_formatted.append({
+                "Símbolo": s["Símbolo"],
+                "Dirección": s["Dirección"]
+            })
+            simbolos_vistos.add(s["Símbolo"])
+
+    # Modificar la estructura de tipos (solo números únicos)
+    tipos_formatted = []
+    tipos_vistos = set()
+    for t in tipos:
+        if t["Tipo"] == "entero" and t["Símbolo"] not in tipos_vistos:
+            tipos_formatted.append({
+                "Símbolo": t["Símbolo"],
+                "Tipo": t["Tipo"]
+            })
+            tipos_vistos.add(t["Símbolo"])
+
+    return None, tokens_formatted, simbolos_formatted, tipos_formatted
+
+def generar_imagen_tabla(df: pd.DataFrame, titulo: str) -> str:
+    # Definir colores para el diseño minimalista
+    colors = {
+        'background': '#ffffff',
+        'header': '#6c5ce7',
+        'header_text': '#ffffff',
+        'border': '#a8a8a8',
+        'cell': '#ffffff',
+        'title': '#2d3436',
+        'text': '#2d3436'
+    }
+    
+    plt.style.use('seaborn-v0_8-whitegrid')
+    plt.figure(figsize=(10, 6), facecolor=colors['background'])
+    plt.axis('tight')
+    plt.axis('off')
+    
+    if titulo == "Tabla de Tokens":
+        tabla = plt.table(
+            cellText=df.values,
+            cellLoc='left',
+            loc='center',
+            edges='horizontal',
+            bbox=[0.1, 0.1, 0.8, 0.8]
+        )
+        # Ajustar ancho de columna para tokens
+        tabla.auto_set_column_width([0])
+    else:
+        tabla = plt.table(
+            cellText=df.values,
+            colLabels=df.columns,
+            cellLoc='center',
+            loc='center',
+            edges='horizontal',
+            bbox=[0.1, 0.1, 0.8, 0.8]
+        )
+    
+    tabla.auto_set_font_size(False)
+    tabla.set_fontsize(9)
+    
+    # Estilizar la tabla
+    for k, cell in tabla._cells.items():
+        cell.set_edgecolor(colors['border'])
+        cell.set_text_props(color=colors['text'])
+        
+        if k[0] == 0 and titulo != "Tabla de Tokens":
+            # Estilo para encabezados
+            cell.set_facecolor(colors['header'])
+            cell.set_text_props(weight='bold', color=colors['header_text'])
+        else:
+            # Estilo para celdas
+            cell.set_facecolor(colors['cell'])
+            if titulo == "Tabla de Tokens":
+                cell._text.set_horizontalalignment('left')
+    
+    plt.title(titulo, pad=20, fontsize=12, fontweight='bold', color=colors['title'])
+    
+    # Guardar con fondo transparente
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight', dpi=300, 
+                facecolor=colors['background'], edgecolor='none')
+    plt.close()
+    
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.getvalue()).decode()
+    return img_base64
 
 @app.post("/analizar", response_model=AnalisisResponse)
 def analizar_expresion(request: ExpresionRequest):
