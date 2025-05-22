@@ -78,9 +78,13 @@ def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict],
     i = 0
     ultimo_operador = False
     token_id = 1
-    # Dictionary to track unique symbols and their addresses
     simbolos_unicos = {}
     dir_counter = 1
+
+    # Validate input string for invalid characters first
+    for pos, char in enumerate(expresion):
+        if not (char.isdigit() or char in '+-*/ ' or char.isspace()):
+            return f'Error: Carácter no válido "{char}" encontrado en la posición {pos + 1}', [], [], []
 
     while i < len(expresion):
         char = expresion[i]
@@ -91,37 +95,59 @@ def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict],
 
         if char.isdigit():
             numero = char
+            start_pos = i
             i += 1
             while i < len(expresion) and expresion[i].isdigit():
                 numero += expresion[i]
                 i += 1
             
-            # Assign memory address to unique symbols
             if numero not in simbolos_unicos:
                 simbolos_unicos[numero] = f"dir_{dir_counter}"
                 dir_counter += 1
 
-            tokens.append({"ID": token_id, "Token": numero, "Tipo": "Número"})
+            tokens.append({
+                "ID": token_id,
+                "Token": numero,
+                "Tipo": "Número",
+                "Posición": start_pos + 1
+            })
             simbolos.append({
                 "ID": token_id, 
                 "Símbolo": numero, 
                 "Categoría": "Literal",
-                "Dirección": simbolos_unicos[numero]
+                "Dirección": simbolos_unicos[numero],
+                "Tipo": "entero"  # Added to match requirements
             })
-            tipos.append({"ID": token_id, "Tipo": "int", "Descripción": "Número entero"})
+            tipos.append({
+                "ID": token_id,
+                "Símbolo": numero,  # Changed to match requirements
+                "Tipo": "entero",
+                "Referencia": simbolos_unicos[numero]  # Added reference to symbol table
+            })
             token_id += 1
             ultimo_operador = False
         elif char in '+-*/':
             if ultimo_operador:
-                return f'Error: Operadores consecutivos encontrados en la posición {i}', [], [], []
-            tokens.append({"ID": token_id, "Token": char, "Tipo": "Operador"})
-            simbolos.append({"ID": token_id, "Símbolo": char, "Categoría": "Operador"})
-            tipos.append({"ID": token_id, "Tipo": "operator", "Descripción": "Operador aritmético"})
+                return f'Error: Operadores consecutivos encontrados en la posición {i + 1}', [], [], []
+            tokens.append({
+                "ID": token_id,
+                "Token": char,
+                "Tipo": "Operador",
+                "Posición": i + 1
+            })
+            simbolos.append({
+                "ID": token_id,
+                "Símbolo": char,
+                "Categoría": "Operador"
+            })
+            tipos.append({
+                "ID": token_id,
+                "Símbolo": char,
+                "Tipo": "operator"
+            })
             token_id += 1
             ultimo_operador = True
             i += 1
-        else:
-            return f'Error: Carácter no válido "{char}" encontrado en la posición {i}', [], [], []
 
     if ultimo_operador:
         return 'Error: La expresión no puede terminar con un operador', [], [], []
