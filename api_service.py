@@ -24,21 +24,46 @@ class AnalisisResponse(BaseModel):
     types_image: Optional[str] = None
 
 def generar_imagen_tabla(df: pd.DataFrame, titulo: str) -> str:
-    plt.figure(figsize=(10, 6))
+    # Set style to minimalist
+    plt.style.use('seaborn-v0_8-whitegrid')
+    
+    # Create figure with white background
+    plt.figure(figsize=(10, 6), facecolor='white')
     plt.axis('tight')
     plt.axis('off')
-    tabla = plt.table(cellText=df.values,
-                     colLabels=df.columns,
-                     cellLoc='center',
-                     loc='center')
-    plt.title(titulo)
     
-    # Guardar la imagen en un buffer de memoria
+    # Create table with minimalist design
+    tabla = plt.table(
+        cellText=df.values,
+        colLabels=df.columns,
+        cellLoc='center',
+        loc='center',
+        edges='horizontal',  # Only show horizontal lines
+        bbox=[0.1, 0.1, 0.8, 0.8]  # Adjust table size and position
+    )
+    
+    # Style the table
+    tabla.auto_set_font_size(False)
+    tabla.set_fontsize(9)
+    
+    # Style header
+    for k, cell in tabla._cells.items():
+        cell.set_edgecolor('white')
+        if k[0] == 0:  # Header styling
+            cell.set_facecolor('#f0f0f0')
+            cell.set_text_props(weight='bold')
+        else:  # Content styling
+            cell.set_facecolor('white')
+    
+    # Add title with minimal styling
+    plt.title(titulo, pad=20, fontsize=12, fontweight='bold')
+    
+    # Save to buffer
     buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight')
+    plt.savefig(buf, format='png', bbox_inches='tight', dpi=300)
     plt.close()
     
-    # Convertir la imagen a base64
+    # Convert to base64
     buf.seek(0)
     img_base64 = base64.b64encode(buf.getvalue()).decode()
     return img_base64
@@ -53,6 +78,9 @@ def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict],
     i = 0
     ultimo_operador = False
     token_id = 1
+    # Dictionary to track unique symbols and their addresses
+    simbolos_unicos = {}
+    dir_counter = 1
 
     while i < len(expresion):
         char = expresion[i]
@@ -67,8 +95,19 @@ def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict],
             while i < len(expresion) and expresion[i].isdigit():
                 numero += expresion[i]
                 i += 1
+            
+            # Assign memory address to unique symbols
+            if numero not in simbolos_unicos:
+                simbolos_unicos[numero] = f"dir_{dir_counter}"
+                dir_counter += 1
+
             tokens.append({"ID": token_id, "Token": numero, "Tipo": "Número"})
-            simbolos.append({"ID": token_id, "Símbolo": numero, "Categoría": "Literal"})
+            simbolos.append({
+                "ID": token_id, 
+                "Símbolo": numero, 
+                "Categoría": "Literal",
+                "Dirección": simbolos_unicos[numero]
+            })
             tipos.append({"ID": token_id, "Tipo": "int", "Descripción": "Número entero"})
             token_id += 1
             ultimo_operador = False
