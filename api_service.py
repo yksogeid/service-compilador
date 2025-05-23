@@ -143,61 +143,64 @@ def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict],
     return None, tokens_formatted, simbolos_formatted, tipos_formatted
 
 def generar_imagen_tabla(df: pd.DataFrame, titulo: str) -> str:
-    # Definir colores para el diseño minimalista
+    # Definir colores para el diseño minimalista moderno
     colors = {
-        'background': '#ffffff',
-        'header': '#6c5ce7',
-        'header_text': '#ffffff',
-        'border': '#a8a8a8',
-        'cell': '#ffffff',
-        'title': '#2d3436',
-        'text': '#2d3436'
+        'background': '#f8f9fa',  # Fondo suave
+        'header': '#4361ee',      # Azul moderno
+        'header_text': '#ffffff',  # Texto blanco
+        'border': '#e9ecef',      # Bordes sutiles
+        'cell': '#ffffff',        # Celdas blancas
+        'title': '#2b2d42',      # Título oscuro elegante
+        'text': '#495057'         # Texto gris oscuro
     }
     
     plt.style.use('seaborn-v0_8-whitegrid')
-    plt.figure(figsize=(10, 6), facecolor=colors['background'])
+    plt.figure(figsize=(12, 7), facecolor=colors['background'])
     plt.axis('tight')
     plt.axis('off')
     
+    # Configuración común de la tabla
+    table_params = {
+        'cellText': df.values,
+        'loc': 'center',
+        'bbox': [0.05, 0.05, 0.9, 0.85],  # Mejor uso del espacio
+        'cellLoc': 'left' if titulo == "Tabla de Tokens" else 'center'
+    }
+    
+    if titulo != "Tabla de Tokens":
+        table_params['colLabels'] = df.columns
+    
+    tabla = plt.table(**table_params)
+    
     if titulo == "Tabla de Tokens":
-        tabla = plt.table(
-            cellText=df.values,
-            cellLoc='left',
-            loc='center',
-            edges='horizontal',
-            bbox=[0.1, 0.1, 0.8, 0.8]
-        )
-        # Ajustar ancho de columna para tokens
         tabla.auto_set_column_width([0])
-    else:
-        tabla = plt.table(
-            cellText=df.values,
-            colLabels=df.columns,
-            cellLoc='center',
-            loc='center',
-            edges='horizontal',
-            bbox=[0.1, 0.1, 0.8, 0.8]
-        )
     
     tabla.auto_set_font_size(False)
-    tabla.set_fontsize(9)
+    tabla.set_fontsize(10)  # Tamaño de fuente más legible
     
-    # Estilizar la tabla
+    # Estilizar la tabla con diseño moderno
     for k, cell in tabla._cells.items():
+        # Eliminar bordes de celdas para un look más limpio
         cell.set_edgecolor(colors['border'])
-        cell.set_text_props(color=colors['text'])
+        cell.set_linewidth(0.5)  # Bordes más finos
         
+        # Configurar texto
+        cell.set_text_props(color=colors['text'], fontname='DejaVu Sans')
+        
+        # Estilizar encabezados
         if k[0] == 0 and titulo != "Tabla de Tokens":
-            # Estilo para encabezados
             cell.set_facecolor(colors['header'])
             cell.set_text_props(weight='bold', color=colors['header_text'])
+            cell.set_alpha(0.9)  # Transparencia sutil
         else:
-            # Estilo para celdas
             cell.set_facecolor(colors['cell'])
             if titulo == "Tabla de Tokens":
                 cell._text.set_horizontalalignment('left')
     
-    plt.title(titulo, pad=20, fontsize=12, fontweight='bold', color=colors['title'])
+    # Título con estilo moderno
+    plt.title(titulo, pad=30, fontsize=14, fontweight='bold', 
+              color=colors['title'], fontname='DejaVu Sans')
+    plt.tight_layout()  # Ajuste automático del layout
     
     # Guardar con fondo transparente
     buf = io.BytesIO()
