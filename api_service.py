@@ -145,17 +145,17 @@ def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict],
 def generar_imagen_tabla(df: pd.DataFrame, titulo: str) -> str:
     # Definir colores para el diseño minimalista moderno
     colors = {
-        'background': '#f8f9fa',  # Fondo suave
-        'header': '#4361ee',      # Azul moderno
+        'background': '#f8f9fa',  # Fondo suave y profesional
+        'header': '#4a5568',      # Gris oscuro elegante
         'header_text': '#ffffff',  # Texto blanco
-        'border': '#e9ecef',      # Bordes sutiles
+        'border': '#e2e8f0',      # Bordes sutiles
         'cell': '#ffffff',        # Celdas blancas
-        'title': '#2b2d42',      # Título oscuro elegante
-        'text': '#495057'         # Texto gris oscuro
+        'title': '#2d3748',      # Título gris oscuro
+        'text': '#4a5568'         # Texto principal
     }
     
     plt.style.use('seaborn-v0_8-whitegrid')
-    plt.figure(figsize=(12, 7), facecolor=colors['background'])
+    plt.figure(figsize=(8, 4), facecolor=colors['background'])
     plt.axis('tight')
     plt.axis('off')
     
@@ -163,7 +163,7 @@ def generar_imagen_tabla(df: pd.DataFrame, titulo: str) -> str:
     table_params = {
         'cellText': df.values,
         'loc': 'center',
-        'bbox': [0.05, 0.05, 0.9, 0.85],  # Mejor uso del espacio
+        'bbox': [0.02, 0.02, 0.96, 0.88],  # Uso más eficiente del espacio
         'cellLoc': 'left' if titulo == "Tabla de Tokens" else 'center'
     }
     
@@ -176,30 +176,32 @@ def generar_imagen_tabla(df: pd.DataFrame, titulo: str) -> str:
         tabla.auto_set_column_width([0])
     
     tabla.auto_set_font_size(False)
-    tabla.set_fontsize(10)  # Tamaño de fuente más legible
+    tabla.set_fontsize(9)  # Tamaño de fuente reducido para diseño compacto
     
-    # Estilizar la tabla con diseño moderno
+    # Estilizar la tabla con diseño moderno y minimalista
     for k, cell in tabla._cells.items():
-        # Eliminar bordes de celdas para un look más limpio
         cell.set_edgecolor(colors['border'])
-        cell.set_linewidth(0.5)  # Bordes más finos
-        
-        # Configurar texto
+        cell.set_linewidth(0.3)  # Bordes más finos para look minimalista
         cell.set_text_props(color=colors['text'], fontname='DejaVu Sans')
         
-        # Estilizar encabezados
+        # Estilizar encabezados con diseño sutil
         if k[0] == 0 and titulo != "Tabla de Tokens":
             cell.set_facecolor(colors['header'])
             cell.set_text_props(weight='bold', color=colors['header_text'])
-            cell.set_alpha(0.9)  # Transparencia sutil
+            cell.set_alpha(0.95)  # Menos transparencia para mejor legibilidad
         else:
             cell.set_facecolor(colors['cell'])
             if titulo == "Tabla de Tokens":
                 cell._text.set_horizontalalignment('left')
     
-    # Título con estilo moderno
-    plt.title(titulo, pad=30, fontsize=14, fontweight='bold', 
+    # Título compacto y elegante
+    plt.title(titulo, pad=20, fontsize=12, fontweight='bold',
               color=colors['title'], fontname='DejaVu Sans')
+    
+    # Copyright discreto
+    plt.figtext(0.5, 0.01, '© YKSOGEID INC', ha='center', va='center',
+                fontsize=8, color=colors['text'], fontname='DejaVu Sans')
+    
     plt.tight_layout()  # Ajuste automático del layout
     
     # Guardar con fondo transparente
