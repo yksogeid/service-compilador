@@ -31,7 +31,7 @@ def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict],
     simbolos = []
     tipos = []
     i = 0
-    ultimo_operador = False
+    ultimo_operador = True  # Inicializado como True para detectar operadores al inicio
     token_id = 1
     simbolos_unicos = {}
     dir_counter = 1
@@ -44,21 +44,36 @@ def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict],
             continue
 
         # Validar caracteres permitidos
-        if not (char.isdigit() or char in '+-*/' or char.isspace()):
+        if not (char.isdigit() or char in '+-*/' or char == '.' or char.isspace()):
             return f'Error: Carácter no válido "{char}" encontrado en la posición {i + 1}', [], [], []
 
-        if char.isdigit():
+        if char.isdigit() or (char == '.' and i + 1 < len(expresion) and expresion[i + 1].isdigit()):
             numero = char
             start_pos = i
             i += 1
-            while i < len(expresion) and expresion[i].isdigit():
-                numero += expresion[i]
-                i += 1
+            punto_decimal = char == '.'
+            
+            while i < len(expresion):
+                if expresion[i].isdigit():
+                    numero += expresion[i]
+                    i += 1
+                elif expresion[i] == '.' and not punto_decimal:
+                    numero += expresion[i]
+                    punto_decimal = True
+                    i += 1
+                else:
+                    break
+            
+            # Validar que el número no termine en punto
+            if numero.endswith('.'):
+                return f'Error: Número decimal incompleto en la posición {start_pos + 1}', [], [], []
             
             if numero not in simbolos_unicos:
                 simbolos_unicos[numero] = f"dir_{dir_counter}"
                 dir_counter += 1
 
+            tipo_numero = "decimal" if '.' in numero else "entero"
+            
             tokens.append({
                 "ID": token_id,
                 "Token": numero,
@@ -70,19 +85,19 @@ def analisis_lexico(expresion: str) -> Tuple[str | None, List[Dict], List[Dict],
                 "Símbolo": numero, 
                 "Categoría": "Literal",
                 "Dirección": simbolos_unicos[numero],
-                "Tipo": "entero"  # Added to match requirements
+                "Tipo": tipo_numero
             })
             tipos.append({
                 "ID": token_id,
-                "Símbolo": numero,  # Changed to match requirements
-                "Tipo": "entero",
-                "Referencia": simbolos_unicos[numero]  # Added reference to symbol table
+                "Símbolo": numero,
+                "Tipo": tipo_numero,
+                "Referencia": simbolos_unicos[numero]
             })
             token_id += 1
             ultimo_operador = False
         elif char in '+-*/':
             if ultimo_operador:
-                return f'Error: Operadores consecutivos encontrados en la posición {i + 1}', [], [], []
+                return f'Error: Operador no válido "{char}" en la posición {i + 1}. No puede haber un operador al inicio o dos operadores consecutivos.', [], [], []
             tokens.append({
                 "ID": token_id,
                 "Token": char,
